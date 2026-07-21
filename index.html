@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>卒業制作カウントダウン</title>
+<meta name="description" content="卒業日から着手目安を自動で逆算して、卒業制作をそっと後押しする学習トラッカー。">
+<meta name="theme-color" content="#185fa5">
+<!-- ホーム画面追加（スマホでアプリのように使えます） -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="卒業制作">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="manifest" href="manifest.webmanifest">
+<!-- SNS共有カード（Slack / LINE / X） -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="卒業制作カウントダウン">
+<meta property="og:description" content="着手目安を自動で逆算して、そっと背中を押す。焦らずに…卒業日に間に合えばオールOK。">
+<meta property="og:image" content="og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root{
+    --bg:#f5f5f4; --card:#ffffff; --line:#e7e5e0; --line2:#d6d3cc;
+    --tx:#1c1c1a; --tx2:#6b6a64; --tx3:#9b9a92;
+    --accent:#185fa5; --accent-bg:#e6f1fb;
+    --warn:#854f0b; --warn-bg:#faeeda;
+    --ok:#0f6e56; --ok-bg:#e1f5ee; --ok-solid:#1d9e75;
+    --danger:#a32d2d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1a1a18; --card:#2a2a27; --line:#3a3a36; --line2:#4a4a44;
+      --tx:#f2f1ec; --tx2:#a8a79f; --tx3:#7a7a72;
+      --accent:#85b7eb; --accent-bg:#0c447c;
+      --warn:#fac775; --warn-bg:#633806;
+      --ok:#5dcaa5; --ok-bg:#085041; --ok-solid:#1d9e75;
+      --danger:#f09595;
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6;}
+  .app{max-width:440px;margin:0 auto;min-height:100vh;padding:14px 12px 40px;}
+  .card{background:var(--card);border:0.5px solid var(--line);border-radius:14px;}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* setup */
+  .setup{padding:26px 20px;}
+  .setup h1{font-size:22px;font-weight:600;margin:0 0 4px;}
+  .setup p.sub{color:var(--tx2);font-size:14px;margin:0 0 24px;}
+  .label{font-size:13px;color:var(--tx2);margin:18px 0 8px;font-weight:500;}
+  .course-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .course-btn{padding:16px 12px;border:1.5px solid var(--line2);background:var(--card);
+    border-radius:12px;font-size:15px;font-weight:500;color:var(--tx);}
+  .course-btn.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);}
+  input[type=date],input[type=number]{width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--line2);
+    border-radius:10px;background:var(--card);color:var(--tx);}
+  .primary{width:100%;padding:15px;border:none;border-radius:12px;background:var(--accent);
+    color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;}
+  .primary:disabled{opacity:.4;}
+  @media (prefers-color-scheme: dark){.primary{color:#04244a;}}
+
+  /* home */
+  .head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:0.5px solid var(--line);}
+  .head .cn{font-size:14px;font-weight:500;}
+  .head .gd{font-size:12px;color:var(--tx3);margin-top:2px;}
+  .iconbtn{background:none;border:none;color:var(--tx3);font-size:19px;padding:4px;}
+  .count{text-align:center;padding:20px 16px 6px;}
+  .count .cap{font-size:13px;color:var(--tx2);}
+  .count .big{font-size:44px;font-weight:600;line-height:1;margin-top:4px;}
+  .count .big small{font-size:18px;color:var(--tx2);margin-left:5px;font-weight:500;}
+  .count .big.over{color:var(--danger);}
+  .donutwrap{display:flex;flex-direction:column;align-items:center;padding:8px 16px 4px;}
+  .donut{position:relative;width:180px;height:180px;}
+  .donut .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .donut .pct{font-size:34px;font-weight:600;line-height:1;}
+  .donut .pl{font-size:12px;color:var(--tx2);margin-top:2px;}
+  .legend{display:flex;gap:18px;margin:10px 0 2px;font-size:13px;}
+  .legend span{display:flex;align-items:center;gap:6px;color:var(--tx2);}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .week{margin:12px 16px 4px;padding:13px 16px;background:var(--accent-bg);border-radius:12px;
+    display:flex;align-items:center;justify-content:space-between;}
+  .week .wl{font-size:14px;color:var(--accent);font-weight:500;}
+  .week .wv{font-size:22px;font-weight:600;color:var(--accent);}
+  .week .wv small{font-size:13px;font-weight:400;margin-left:2px;}
+  .banner{margin:12px 16px 4px;padding:12px 14px;border-radius:12px;display:flex;gap:10px;background:var(--warn-bg);}
+  .banner .bi{font-size:20px;flex-shrink:0;}
+  .banner .bt{font-size:13px;font-weight:600;color:var(--warn);}
+  .banner .bs{font-size:12px;color:var(--warn);margin-top:2px;opacity:.9;}
+  .bigbtn{margin:16px 16px 8px;}
+  .hint{font-size:12px;color:var(--tx3);text-align:center;margin:8px 16px 0;}
+  .road{margin:6px 0 2px;padding:14px 16px 8px;border-top:0.5px solid var(--line);}
+  .road .rt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .road .rt span:first-child{font-size:13px;font-weight:600;color:var(--tx2);}
+  .road .rt span:last-child{font-size:11px;color:var(--tx3);}
+  .ritem{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--line);}
+  .ritem:last-child{border-bottom:none;}
+  .ritem .rbox{font-size:19px;color:var(--tx3);flex-shrink:0;line-height:1;}
+  .ritem.done .rbox{color:var(--ok);}
+  .ritem .rnm{font-size:14px;flex:1;}
+  .ritem.done .rnm{color:var(--tx3);text-decoration:line-through;}
+  .ritem .rh{font-size:11px;color:var(--tx3);margin-left:6px;font-weight:400;}
+  .road .rcap{font-size:11px;color:var(--tx3);line-height:1.55;margin-top:12px;padding-top:11px;border-top:1px solid var(--line2);}
+  .ritem .rdate{font-size:12px;color:var(--tx3);flex-shrink:0;}
+  .ritem.due .rnm{color:var(--warn);font-weight:500;}
+  .ritem.due .rdate{color:var(--warn);font-weight:600;}
+
+  /* update / list */
+  .ubar{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 2px 8px;
+    border-bottom:0.5px solid var(--line);margin:0 -2px;}
+  .ubar .barrow{display:flex;align-items:center;gap:6px;}
+  .homebtn{background:none;border:none;color:var(--accent);font-size:15px;font-weight:600;
+    padding:6px 6px;flex:0 0 auto;}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:2px;scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{flex:0 0 auto;font-size:13px;padding:6px 13px;border:1px solid var(--line2);
+    background:var(--card);border-radius:999px;color:var(--tx2);white-space:nowrap;}
+  .chip.cap{border-color:var(--ok);color:var(--ok);}
+  .uhead{padding:12px 4px 6px;}
+  .uhead .ut{font-size:19px;font-weight:600;}
+  .uhead .us{font-size:12px;color:var(--tx3);margin-top:2px;}
+  .grp{margin-bottom:10px;overflow:hidden;scroll-margin-top:100px;}
+  .grp .gh{width:100%;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;
+    font-size:14px;font-weight:600;background:var(--card);border:none;border-bottom:0.5px solid var(--line);
+    color:var(--tx);cursor:pointer;}
+  .grp.cap .gh{background:var(--ok-bg);color:var(--ok);}
+  .gh .gc{font-size:12px;color:var(--tx3);font-weight:400;display:flex;align-items:center;gap:6px;}
+  .gh .cv{font-size:10px;}
+  .sub{font-size:12px;font-weight:600;color:var(--tx2);padding:10px 14px 4px;background:var(--card);}
+  .trow{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card);border-bottom:0.5px solid var(--line);}
+  .trow .cb{font-size:20px;color:var(--tx3);flex-shrink:0;background:none;border:none;padding:0;line-height:1;}
+  .trow.done .cb{color:var(--ok);}
+  .trow .tn{font-size:14px;flex:1;}
+  .trow.done .tn{color:var(--tx3);text-decoration:line-through;}
+  .trow .th{font-size:11px;color:var(--tx3);flex-shrink:0;}
+  .trow .here{font-size:11px;color:var(--accent);border:1px solid var(--accent);background:transparent;
+    border-radius:6px;padding:5px 9px;flex-shrink:0;font-weight:500;}
+  .foot{text-align:center;margin-top:18px;}
+  .foot button{background:none;border:none;color:var(--tx3);font-size:12px;text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+const DATA = {"web": {"seq": [{"s": "導入STEP", "c": "導入STEPの進め方", "t": "導入STEPで意識してほしいこと", "h": 0.5}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "Webサイトとは", "h": 1.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "HTMLの構成とそれぞれのタグの役割", "h": 3.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "HTMLの構造化", "h": 3.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "CSSの役割と使い方", "h": 3.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "CSSフレームワーク", "h": 5.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "Webページを完成させよう", "h": 5.0}, {"s": "導入STEP", "c": "インターネット/Webの仕組み", "t": "ブラウザにページが表示されるまでの流れ", "h": 1.0}, {"s": "導入STEP", "c": "インターネット/Webの仕組み", "t": "インターネット上の住所：URL", "h": 1.0}, {"s": "導入STEP", "c": "インターネット/Webの仕組み", "t": "プログラムが配置される場所：サーバー", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのデータベース・SQL", "t": "データベースとSQL導入", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのデータベース・SQL", "t": "SELECT文でデータを取得しよう", "h": 2.0}, {"s": "導入STEP", "c": "はじめてのデータベース・SQL", "t": "データを操作しよう", "h": 2.0}, {"s": "導入STEP", "c": "はじめてのデータベース・SQL", "t": "複雑なデータを取得しよう", "h": 3.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "プログラムについて知ろう", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "逐次処理の流れ", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "変数とデータ型", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "条件分岐の流れ", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "ループの流れ", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "関数", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "エラー", "h": 1.0}, {"s": "導入STEP", "c": "Rubyで学ぶプログラミング", "t": "Rubyとは", "h": 2.0}, {"s": "導入STEP", "c": "Rubyで学ぶプログラミング", "t": "Rubyで「Hello World」", "h": 1.0}, {"s": "導入STEP", "c": "Rubyで学ぶプログラミング", "t": "関数と引数", "h": 1.0}, {"s": "導入STEP", "c": "Rubyで学ぶプログラミング", "t": "足し算と掛け算", "h": 1.0}, {"s": "導入STEP", "c": "Rubyで学ぶプログラミング", "t": "配列とループ", "h": 1.0}, {"s": "導入STEP", "c": "Rubyで学ぶプログラミング", "t": "ハッシュ", "h": 2.0}, {"s": "導入STEP", "c": "0から学ぶLinux/コマンドライン", "t": "ファイルとディレクトリ", "h": 1.0}, {"s": "導入STEP", "c": "0から学ぶLinux/コマンドライン", "t": "インターフェイス", "h": 1.0}, {"s": "導入STEP", "c": "0から学ぶLinux/コマンドライン", "t": "入力と出力", "h": 1.0}, {"s": "入門STEP", "c": "0から学ぶLinux/コマンドライン", "t": "コマンドラインでのディレクトリ移動・ファイル操作", "h": 3.0}, {"s": "入門STEP", "c": "入門STEPの進め方", "t": "入門STEPで意識してほしいこと", "h": 0.5}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Dockerを使う利点", "h": 1.0}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Dockerの基本概念", "h": 1.0}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Dockerコマンド概要", "h": 1.0}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Docker Compose概要", "h": 1.0}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Docker Composeコマンド概要", "h": 1.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "Rubyを動かす環境構築", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "プログラムの基礎", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "条件分岐、繰り返し処理", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "情報をまとめる配列", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "配列で扱うメソッド", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "名前と値をセットにするハッシュ", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "まとまりを分けるメソッド", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "オブジェクトの種類を決めるクラス", "h": 3.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "メソッドを共通して使うモジュール", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "実際にアプリを作ってみよう", "h": 2.0}, {"s": "入門STEP", "c": "Ruby入門", "t": "Rubyの理解をより深めよう", "h": 3.0}, {"s": "入門STEP", "c": "Git入門", "t": "Gitの概念について知ろう", "h": 1.0}, {"s": "入門STEP", "c": "Git入門", "t": "Git演習", "h": 3.0}, {"s": "入門STEP", "c": "Rails入門① 〜基本フローの理解〜", "t": "これから作成するアプリの機能を確認しよう", "h": 1.0}, {"s": "入門STEP", "c": "Rails入門① 〜基本フローの理解〜", "t": "Railsアプリケーションを動かしてみよう", "h": 4.0}, {"s": "入門STEP", "c": "Rails入門① 〜基本フローの理解〜", "t": "ユーザー画面を作ってRailsの処理フローを学ぼう", "h": 3.0}, {"s": "入門STEP", "c": "Rails入門① 〜基本フローの理解〜", "t": "詳細イメージを掴むためにデバッグをできるようになろう", "h": 3.0}, {"s": "入門STEP", "c": "Rails入門① 〜基本フローの理解〜", "t": "ユーザー画面を元にコントローラとビューについて知ろう", "h": 4.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "Web技術について", "h": 2.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "HTTP基礎", "h": 3.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "データ形式", "h": 3.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "Webアプリケーション基礎", "h": 3.0}, {"s": "入門STEP", "c": "データベースとO/Rmapper", "t": "データベース入門を読もう", "h": 6.0}, {"s": "入門STEP", "c": "データベースとO/Rmapper", "t": "ActiveRecordの概要について知ろう(SQLとActiveRecord)", "h": 1.0}, {"s": "入門STEP", "c": "データベースとO/Rmapper", "t": "ActiveRecordの操作について知ろう(CRUD)", "h": 1.0}, {"s": "入門STEP", "c": "データベースとO/Rmapper", "t": "ActiveRecordの操作について知ろう (高度なクエリ操作)", "h": 1.0}, {"s": "入門STEP", "c": "Rails入門② 〜 データモデリングと認証の基礎〜", "t": "これから作成するアプリの機能を確認しよう", "h": 1.0}, {"s": "入門STEP", "c": "Rails入門② 〜 データモデリングと認証の基礎〜", "t": "モデルについて知ろう", "h": 4.0}, {"s": "入門STEP", "c": "Rails入門② 〜 データモデリングと認証の基礎〜", "t": "マイグレーションについて知ろう", "h": 5.0}, {"s": "入門STEP", "c": "Rails入門② 〜 データモデリングと認証の基礎〜", "t": "モデルのバリデーションとアソシエーションについて知ろう", "h": 5.0}, {"s": "入門STEP", "c": "Rails入門② 〜 データモデリングと認証の基礎〜", "t": "ログイン機能を作ろう", "h": 5.0}, {"s": "入門STEP", "c": "Rails入門② 〜 データモデリングと認証の基礎〜", "t": "ゼロからタスク管理ページを実装しよう", "h": 16.0}, {"s": "基礎STEP", "c": "デバッグ入門", "t": "デバッグの考え方", "h": 1.0}, {"s": "基礎STEP", "c": "デバッグ入門", "t": "デバッグを体験してみよう", "h": 3.0}, {"s": "基礎STEP", "c": "基礎STEPの進め方", "t": "基礎STEPで意識してほしいこと", "h": 0.5}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "これから作成するアプリの機能を確認しよう", "h": 1.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "アプリの基本設定を行う", "h": 2.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "全ページにヘッダー/フッターを設置", "h": 6.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "sorceryを使用して、ユーザー機能を作成しよう", "h": 16.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "i18nによる日本語化対応", "h": 4.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "フラッシュメッセージの設定", "h": 6.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "デコレーターの導入", "h": 4.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "掲示板の一覧機能の作成", "h": 8.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "掲示板作成機能", "h": 8.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "フォーム入力時エラー情報を個別表示", "h": 4.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "掲示板の画像アップロード機能", "h": 12.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "掲示板詳細画面の追加/コメント機能の実装", "h": 16.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "タイトルを動的に出力する", "h": 4.0}, {"s": "基礎STEP", "c": "Rails基礎① 〜 アプリケーション開発の基礎〜", "t": "掲示板の編集、削除機能の実装", "h": 11.0}, {"s": "基礎STEP", "c": "エラーへの向き合い方と解決方法", "t": "テストコードの内容と実行結果を読めるようになろう", "h": 5.0}, {"s": "基礎STEP", "c": "エラーへの向き合い方と解決方法", "t": "エラーの情報を見てバグを解消しよう", "h": 24.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "JavaScriptとは", "h": 1.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "JavaScriptの基本文法", "h": 2.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "関数・DOM・イベントについて知ろう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "デバッグでプログラムの動作を把握しよう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "DOM操作演習", "h": 5.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "クライアントサイドWebAPIを使ってみよう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "非同期通信でWebAPIからデータを取得してみよう", "h": 2.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "Promiseで非同期処理を制御してみよう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "async/awaitで非同期処理をシンプルに書いてみよう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "Ajaxで画面を部分的に更新してみよう", "h": 3.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "これから作成するアプリの機能を確認しよう", "h": 1.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "ブックマーク機能の追加", "h": 12.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "ブックマークボタンのajax化", "h": 8.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "コメント投稿、削除機能のajax化", "h": 12.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "掲示板のページネーション", "h": 8.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "掲示板の検索機能を実装", "h": 8.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "プロフィール編集機能の実装", "h": 4.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "パスワードリセット機能の実装", "h": 16.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "[管理画面] 管理画面へのログイン機能、管理画面トップページの作成", "h": 12.0}, {"s": "基礎STEP", "c": "Rails基礎②  〜高度な機能開発 〜", "t": "[管理画面]掲示板/ユーザのCRUD機能の作成", "h": 8.0}, {"s": "基礎STEP", "c": "データモデリングの手法", "t": "ユーザー登録機能のテーブル設計", "h": 1.0}, {"s": "基礎STEP", "c": "データモデリングの手法", "t": "つぶやき投稿機能のテーブル設計", "h": 1.0}, {"s": "基礎STEP", "c": "データモデリングの手法", "t": "コメント投稿機能のテーブル設計", "h": 1.0}, {"s": "基礎STEP", "c": "データモデリングの手法", "t": "いいね投稿機能のテーブル設計", "h": 1.0}, {"s": "基礎STEP", "c": "Rubyで学ぶアルゴリズム", "t": "線形探索", "h": 5.0}, {"s": "基礎STEP", "c": "Rubyで学ぶアルゴリズム", "t": "二分探索", "h": 5.0}, {"s": "基礎STEP", "c": "Rubyで学ぶアルゴリズム", "t": "動的計画法", "h": 5.0}, {"s": "基礎STEP", "c": "応用STEPの進め方", "t": "応用STEPで意識してほしいこと", "h": 0.5}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "ソフトウェアテストの基礎", "h": 0.5}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "テスト駆動開発（TDD）", "h": 0.5}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "テスト手法の詳細", "h": 0.5}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "テスト戦略と計画", "h": 0.5}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "テスト自動化ツールの活用", "h": 0.5}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "RSpecの復習とセットアップ", "h": 1.0}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "モデルスペック", "h": 1.0}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "システムスペック", "h": 1.0}, {"s": "基礎STEP", "c": "ソフトウェアテスト基礎と実践", "t": "RSpecの修正", "h": 2.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "アプリ開発における心得", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "ミニアプリ開発と卒業制作の違い", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "エンジニアのコミュニケーション", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "GitHubでのコミュニケーション方法", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "アイデアの種をみつける", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "アイデアをブラッシュアップする", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "機能を考える", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "技術調査のやり方", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "画面遷移の考え方", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "ER図のルール", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "タスク分けと見積もり", "h": 1.0}, {"s": "アプリ開発完全ガイド", "c": "アプリ開発完全ガイド", "t": "MVPリリースと本リリース", "h": 1.0}, {"s": "応用STEP", "c": "Rails応用① 〜アプリの改善と実務対応〜", "t": "画像挿入時のバグ修正", "h": 8.0}, {"s": "応用STEP", "c": "Rails応用① 〜アプリの改善と実務対応〜", "t": "パンくずの設定", "h": 4.0}, {"s": "応用STEP", "c": "Rails応用① 〜アプリの改善と実務対応〜", "t": "テキスト挿入時のバグ修正", "h": 2.0}, {"s": "応用STEP", "c": "Rails応用① 〜アプリの改善と実務対応〜", "t": "記事ステータスの追加", "h": 16.0}, {"s": "応用STEP", "c": "Rails応用① 〜アプリの改善と実務対応〜", "t": "検索機能の追加", "h": 24.0}, {"s": "応用STEP", "c": "Rails応用① 〜アプリの改善と実務対応〜", "t": "アクション権限の調整", "h": 4.0}, {"s": "応用STEP", "c": "Rails応用① 〜アプリの改善と実務対応〜", "t": "アイキャッチの表示サイズ / 位置指定", "h": 16.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "TypeScriptの基本", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "React概要（仮想DOM・JSX・コンポーネントetc）", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "props, useState, useEffect, React Router", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "再レンダリング", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "ディレクトリ設計とデザインパターン", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "これから作成するアプリの機能を確認しよう", "h": 1.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : 概要と環境構築", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : トップページ作成", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスク一覧ページ作成", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスク詳細ページ作成", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスク作成機能", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスク編集・削除機能", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスクステータス変更機能", "h": 5.0}, {"s": "応用STEP", "c": "Rails応用② 〜イシュー駆動開発の体験〜", "t": "issueから1機能を作ってみよう", "h": 32.0}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "Dockerfileの基礎と基本構文", "h": 1.0}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "レイヤーキャッシュの基礎と活用", "h": 1.0}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "docker-composeによるマルチコンテナ入門", "h": 1.0}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "開発／本番向けDocker運用の基本", "h": 1.0}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "Railsアプリケーションのコンテナ化ハンズオン", "h": 1.0}, {"s": "応用STEP", "c": "クラウドインフラ基礎", "t": "インフラ基礎", "h": 1.0}, {"s": "応用STEP", "c": "クラウドインフラ基礎", "t": "サーバー基礎", "h": 1.0}, {"s": "応用STEP", "c": "クラウドインフラ基礎", "t": "ネットワーク基礎", "h": 2.0}, {"s": "応用STEP", "c": "クラウドインフラ基礎", "t": "クラウドとは", "h": 1.0}, {"s": "応用STEP", "c": "クラウドインフラ基礎", "t": "AWSを使ってみよう", "h": 1.0}, {"s": "応用STEP", "c": "クラウドインフラ基礎", "t": "AWSでインフラを構築しよう", "h": 2.0}, {"s": "応用STEP", "c": "クラウドインフラ基礎", "t": "AWSでアプリを動かしてみよう", "h": 6.0}, {"s": "応用STEP", "c": "Webセキュリティ基礎", "t": "セキュリティの基礎と全体像", "h": 1.0}, {"s": "応用STEP", "c": "Webセキュリティ基礎", "t": "攻撃手法と対策の基本", "h": 1.0}, {"s": "応用STEP", "c": "Webセキュリティ基礎", "t": "Webセキュリティ：脆弱性と実践対策", "h": 1.0}, {"s": "卒業制作", "c": "卒業制作", "t": "README", "h": 10.0}, {"s": "卒業制作", "c": "卒業制作", "t": "画面遷移図", "h": 5.0}, {"s": "卒業制作", "c": "卒業制作", "t": "ER図", "h": 15.0}, {"s": "卒業制作", "c": "卒業制作", "t": "issueベースの開発", "h": 10.0}, {"s": "卒業制作", "c": "卒業制作", "t": "MVPリリース", "h": 140.0}], "capNames": ["README", "画面遷移図", "ER図", "issueベースの開発", "MVPリリース"]}, "python": {"seq": [{"s": "導入STEP", "c": "導入STEPの進め方（AIを用いた学習の進め方）", "t": "導入STEPで意識してほしいこと", "h": 0.5}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "Webサイトとは", "h": 1.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "HTMLの構成とそれぞれのタグの役割", "h": 3.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "HTMLの構造化", "h": 3.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "CSSの役割と使い方", "h": 3.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "CSSフレームワーク", "h": 5.0}, {"s": "導入STEP", "c": "HTML&CSSでWebサイトを作る", "t": "Webページを完成させよう", "h": 5.0}, {"s": "導入STEP", "c": "Webサイトの仕組み", "t": "ブラウザにページが表示されるまでの流れ", "h": 1.0}, {"s": "導入STEP", "c": "Webサイトの仕組み", "t": "インターネット上の住所：URL", "h": 1.0}, {"s": "導入STEP", "c": "Webサイトの仕組み", "t": "プログラムが配置される場所：サーバー", "h": 1.0}, {"s": "導入STEP", "c": "データベース・SQL導入", "t": "データベースとSQL導入", "h": 1.0}, {"s": "導入STEP", "c": "データベース・SQL導入", "t": "SELECT文でデータを取得しよう", "h": 2.0}, {"s": "導入STEP", "c": "データベース・SQL導入", "t": "データを操作しよう", "h": 2.0}, {"s": "導入STEP", "c": "データベース・SQL導入", "t": "複雑なデータを取得しよう", "h": 3.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "プログラムについて知ろう", "h": 0.5}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "逐次処理の流れ", "h": 0.5}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "変数とデータ型", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "条件分岐の流れ", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "ループの流れ", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "関数", "h": 1.0}, {"s": "導入STEP", "c": "はじめてのプログラミング", "t": "エラー", "h": 1.0}, {"s": "導入STEP", "c": "Pythonで学ぶプログラミング", "t": "Pythonとは", "h": 2.0}, {"s": "導入STEP", "c": "Pythonで学ぶプログラミング", "t": "Pythonで「Hello World」", "h": 1.0}, {"s": "導入STEP", "c": "Pythonで学ぶプログラミング", "t": "関数と引数", "h": 1.0}, {"s": "導入STEP", "c": "Pythonで学ぶプログラミング", "t": "足し算と掛け算", "h": 1.0}, {"s": "導入STEP", "c": "Pythonで学ぶプログラミング", "t": "配列とループ", "h": 1.0}, {"s": "導入STEP", "c": "Pythonで学ぶプログラミング", "t": "辞書(dict)", "h": 2.0}, {"s": "導入STEP", "c": "0から学ぶLinux/コマンドライン", "t": "ファイルとディレクトリ", "h": 1.0}, {"s": "導入STEP", "c": "0から学ぶLinux/コマンドライン", "t": "インターフェイス", "h": 1.0}, {"s": "導入STEP", "c": "0から学ぶLinux/コマンドライン", "t": "入力と出力", "h": 1.0}, {"s": "導入STEP", "c": "0から学ぶLinux/コマンドライン", "t": "コマンドラインでのディレクトリ移動・ファイル操作", "h": 3.0}, {"s": "導入STEP", "c": "AI時代のWebエンジニアリテラシー", "t": "AI時代を生きるエンジニアに必要な意識", "h": 0.5}, {"s": "導入STEP", "c": "AI時代のWebエンジニアリテラシー", "t": "AI・機械学習・生成AIの違いと仕組みの概要", "h": 0.5}, {"s": "導入STEP", "c": "AI時代のWebエンジニアリテラシー", "t": "生成AIの得意分野と人間が担うべきこと", "h": 0.5}, {"s": "導入STEP", "c": "AI時代のWebエンジニアリテラシー", "t": "生成AIを安全に使うためのリテラシー", "h": 0.5}, {"s": "導入STEP", "c": "AI時代のWebエンジニアリテラシー", "t": "生成AIの活用事例とエンジニアリングへの組み込み", "h": 0.5}, {"s": "導入STEP", "c": "AI時代のWebエンジニアリテラシー", "t": "AI時代におけるエンジニアの学びと設計力", "h": 0.5}, {"s": "入門STEP", "c": "入門STEPの進め方", "t": "入門STEPで意識してほしいこと", "h": 0.5}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Dockerを使う利点", "h": 1.0}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Dockerの基本概念", "h": 1.0}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Dockerコマンド概要", "h": 1.0}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Docker Compose概要", "h": 1.0}, {"s": "入門STEP", "c": "はじめてのDocker", "t": "Docker Composeコマンド概要", "h": 1.0}, {"s": "入門STEP", "c": "Python入門", "t": "Pythonを動かす環境構築をしよう", "h": 1.0}, {"s": "入門STEP", "c": "Python入門", "t": "変数とデータ型について知ろう", "h": 1.0}, {"s": "入門STEP", "c": "Python入門", "t": "エラーメッセージを味方にしよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "条件分岐で処理を制御しよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "繰り返し処理でタスクを自動化しよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "関数で処理をまとめよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "リストと辞書でデータを管理しよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "クラスでデータと処理をまとめよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "エラーに強いプログラムを作ろう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "ファイルとデータ間のやり取りをしよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "標準ライブラリで実践的な機能を活用しよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "JSONでデータを構造化しよう", "h": 2.0}, {"s": "入門STEP", "c": "Python入門", "t": "モジュール分割でコードを整理しよう", "h": 2.0}, {"s": "入門STEP", "c": "Git入門", "t": "Gitの概念について知ろう", "h": 1.0}, {"s": "入門STEP", "c": "Git入門", "t": "Git演習", "h": 3.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "Web技術について", "h": 2.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "HTTP基礎", "h": 2.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "データ形式", "h": 2.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "Webアプリケーション基礎", "h": 2.0}, {"s": "入門STEP", "c": "Webを支える技術", "t": "Webのセキュリティ", "h": 3.0}, {"s": "入門STEP", "c": "Django入門①〜基本フローの理解〜", "t": "オープニング・ノート：骨格プレビュー", "h": 1.0}, {"s": "入門STEP", "c": "Django入門①〜基本フローの理解〜", "t": "ファースト・コード：Dajngo概要", "h": 1.0}, {"s": "入門STEP", "c": "Django入門①〜基本フローの理解〜", "t": "イントロ：ルーティング & ビュー", "h": 3.0}, {"s": "入門STEP", "c": "Django入門①〜基本フローの理解〜", "t": "メロディ：ユーザー登録・ログイン・ログアウト", "h": 3.0}, {"s": "入門STEP", "c": "Django入門①〜基本フローの理解〜", "t": "コンピング：同じレイアウトを使いまわす", "h": 3.0}, {"s": "入門STEP", "c": "データベースとO/RMapper", "t": "データベース入門を読もう", "h": 6.0}, {"s": "入門STEP", "c": "データベースとO/RMapper", "t": "Django ORMの概要", "h": 1.0}, {"s": "入門STEP", "c": "データベースとO/RMapper", "t": "Django ORMの基本操作（CRUD）", "h": 1.0}, {"s": "入門STEP", "c": "データベースとO/RMapper", "t": "少し応用してみよう", "h": 1.0}, {"s": "入門STEP", "c": "Django入門②〜 データモデリングと認証の基礎〜", "t": "ブリッジ：CRUDプレビュー", "h": 1.0}, {"s": "入門STEP", "c": "Django入門②〜 データモデリングと認証の基礎〜", "t": "チューニング：Try to Debug", "h": 6.0}, {"s": "入門STEP", "c": "Django入門②〜 データモデリングと認証の基礎〜", "t": "コード・チェンジ：記事モデルのマイグレーション", "h": 4.0}, {"s": "入門STEP", "c": "Django入門②〜 データモデリングと認証の基礎〜", "t": "リフ：記事一覧", "h": 5.0}, {"s": "入門STEP", "c": "Django入門②〜 データモデリングと認証の基礎〜", "t": "アドリブ：記事投稿", "h": 5.0}, {"s": "入門STEP", "c": "Django入門②〜 データモデリングと認証の基礎〜", "t": "ヴァース：記事詳細", "h": 5.0}, {"s": "入門STEP", "c": "Django入門②〜 データモデリングと認証の基礎〜", "t": "インプロヴィゼーション：記事編集と更新", "h": 5.0}, {"s": "入門STEP", "c": "Django入門②〜 データモデリングと認証の基礎〜", "t": "フィナーレ：記事削除とルートページ設定", "h": 5.0}, {"s": "入門STEP", "c": "AIアプリケーションの仕組みと作り方", "t": "AIで広がるアプリケーションの可能性", "h": 1.0}, {"s": "入門STEP", "c": "AIアプリケーションの仕組みと作り方", "t": "AI機能を組み込む設計の基本", "h": 1.0}, {"s": "入門STEP", "c": "AIアプリケーションの仕組みと作り方", "t": "AI活用の実践事例とアイデア発想", "h": 1.0}, {"s": "入門STEP", "c": "AIアプリケーションの仕組みと作り方", "t": "実装で知っておくべき実践ポイント", "h": 1.0}, {"s": "基礎STEP", "c": "基礎STEPの進め方", "t": "基礎STEPで意識してほしいこと", "h": 0.5}, {"s": "基礎STEP", "c": "Djangoを用いたWebアプリケーション開発", "t": "リプライズ：体験強化プレビュー", "h": 2.0}, {"s": "基礎STEP", "c": "Djangoを用いたWebアプリケーション開発", "t": "モジュレーション：アプリケーションの設定とi18n対応", "h": 7.0}, {"s": "基礎STEP", "c": "Djangoを用いたWebアプリケーション開発", "t": "ダイナミクス：フラッシュメッセージ", "h": 7.0}, {"s": "基礎STEP", "c": "Djangoを用いたWebアプリケーション開発", "t": "コール＆レスポンス：記事詳細ページにコメント機能", "h": 15.0}, {"s": "基礎STEP", "c": "Djangoを用いたWebアプリケーション開発", "t": "リズム・チェンジ：ページネーション・シードデータ", "h": 18.0}, {"s": "基礎STEP", "c": "Djangoを用いたWebアプリケーション開発", "t": "ハーモニー：画像アップロード", "h": 18.0}, {"s": "基礎STEP", "c": "Djangoを用いたWebアプリケーション開発", "t": "モチーフ：検索機能", "h": 15.0}, {"s": "基礎STEP", "c": "Djangoを用いたWebアプリケーション開発", "t": "フェルマータ：ブックマーク", "h": 20.0}, {"s": "基礎STEP", "c": "エラーへの向き合い方と解決方法", "t": "テストコードの内容と実行結果を読めるようになろう", "h": 7.0}, {"s": "基礎STEP", "c": "エラーへの向き合い方と解決方法", "t": "エラーの情報を見てバグを解消しよう", "h": 22.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "JavaScriptとは", "h": 1.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "JavaScriptの基本文法", "h": 2.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "関数・DOM・イベントについて知ろう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "デバッグでプログラムの動作を把握しよう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "DOM操作演習", "h": 5.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "クライアントサイドWebAPIを使ってみよう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "非同期通信でWebAPIからデータを取得してみよう", "h": 2.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "Promiseで非同期処理を制御してみよう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "async/awaitで非同期処理をシンプルに書いてみよう", "h": 3.0}, {"s": "基礎STEP", "c": "JavaScriptマスター", "t": "Ajaxで画面を部分的に更新してみよう", "h": 3.0}, {"s": "基礎STEP", "c": "Djangoを用いた実践的な機能開発", "t": "サード・コーラス：仕上げプレビュー", "h": 2.0}, {"s": "基礎STEP", "c": "Djangoを用いた実践的な機能開発", "t": "シンコペーション：ブックマークの非同期化", "h": 10.0}, {"s": "基礎STEP", "c": "Djangoを用いた実践的な機能開発", "t": "ポリリズム：コメントの非同期化", "h": 12.0}, {"s": "基礎STEP", "c": "Djangoを用いた実践的な機能開発", "t": "ヴォイシング：プロフィール編集", "h": 6.0}, {"s": "基礎STEP", "c": "Djangoを用いた実践的な機能開発", "t": "ターンアラウンド：パスワードリセット", "h": 12.0}, {"s": "基礎STEP", "c": "Djangoを用いた実践的な機能開発", "t": "クロスオーバー：外部APIを使った機能実装", "h": 47.0}, {"s": "基礎STEP", "c": "データモデリングの手法", "t": "ユーザー登録機能のテーブル設計", "h": 1.0}, {"s": "基礎STEP", "c": "データモデリングの手法", "t": "つぶやき投稿機能のテーブル設計", "h": 1.0}, {"s": "基礎STEP", "c": "データモデリングの手法", "t": "コメント投稿機能のテーブル設計", "h": 1.0}, {"s": "基礎STEP", "c": "データモデリングの手法", "t": "いいね投稿機能のテーブル設計", "h": 1.0}, {"s": "基礎STEP", "c": "Pythonで学ぶアルゴリズム", "t": "線形探索", "h": 5.0}, {"s": "基礎STEP", "c": "Pythonで学ぶアルゴリズム", "t": "二分探索", "h": 5.0}, {"s": "基礎STEP", "c": "Pythonで学ぶアルゴリズム", "t": "動的計画法", "h": 5.0}, {"s": "応用STEP", "c": "応用STEPの進め方", "t": "応用STEPで意識してほしいこと", "h": 0.5}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "アプリ開発における心得", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "ミニアプリ開発と卒業制作の違い", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "エンジニアのコミュニケーション", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "GitHubでのコミュニケーション方法", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "アイデアの種をみつける", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "アイデアをブラッシュアップする", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "機能を考える", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "技術調査のやり方", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "画面遷移の考え方", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "ER図のルール", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "タスク分けと見積もり", "h": 1.0}, {"s": "応用STEP", "c": "アプリ開発完全ガイド", "t": "MVPリリースと本リリース", "h": 1.0}, {"s": "応用STEP", "c": "AI駆動開発〜AIと共に開発を進める手法〜", "t": "プロンプト戦略", "h": 1.0}, {"s": "応用STEP", "c": "AI駆動開発〜AIと共に開発を進める手法〜", "t": "アイデア抽出", "h": 1.0}, {"s": "応用STEP", "c": "AI駆動開発〜AIと共に開発を進める手法〜", "t": "画面設計・UI/UX", "h": 1.0}, {"s": "応用STEP", "c": "AI駆動開発〜AIと共に開発を進める手法〜", "t": "VibeCoding", "h": 1.0}, {"s": "応用STEP", "c": "AI駆動開発〜AIと共に開発を進める手法〜", "t": "Spec駆動開発", "h": 1.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "TypeScriptの基本", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "React概要（仮想DOM・JSX・コンポーネントetc）", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "props, useState, useEffect, React Router", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "再レンダリング", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "ディレクトリ設計とデザインパターン", "h": 3.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "これから作成するアプリの機能を確認しよう", "h": 1.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : 概要と環境構築", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : トップページ作成", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスク一覧ページ作成", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスク詳細ページ作成", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスク作成機能", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスク編集・削除機能", "h": 5.0}, {"s": "応用STEP", "c": "Reactマスター", "t": "Reactアプリ開発 : タスクステータス変更機能", "h": 5.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "FastAPIについて〜軽量フレイムワークとは？〜", "h": 4.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "FastAPIについて〜FastAPIの基本〜", "h": 3.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "FastAPIについて〜主要ライブラリ〜", "h": 3.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "クリーンアーキテクチャについて〜このプロダクトの詳細〜", "h": 5.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "ログアウト機能のバグ修正", "h": 8.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "アイコン削除機能のバグ修正", "h": 5.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "カリキュラム詳細画面の修正", "h": 15.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "メールの文言修正", "h": 3.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "ヘルプ一覧画面のバグ修正", "h": 8.0}, {"s": "応用STEP", "c": "Fast APIを用いたWeb APIの構築", "t": "ヘルプ詳細画面用APIの作成", "h": 20.0}, {"s": "応用STEP", "c": "LangChain/LLMによるRAGアプリケーション開発", "t": "RAG が必要になる瞬間", "h": 4.0}, {"s": "応用STEP", "c": "LangChain/LLMによるRAGアプリケーション開発", "t": "検索の基礎 — キーワード vs セマンティック", "h": 4.0}, {"s": "応用STEP", "c": "LangChain/LLMによるRAGアプリケーション開発", "t": "ベクトル検索基盤の構築", "h": 4.0}, {"s": "応用STEP", "c": "LangChain/LLMによるRAGアプリケーション開発", "t": "文書検索 Web アプリの完成", "h": 5.0}, {"s": "応用STEP", "c": "LangChain/LLMによるRAGアプリケーション開発", "t": "RAG（文書参照型 AI 回答）システムの実装", "h": 5.0}, {"s": "応用STEP", "c": "LangChain/LLMによるRAGアプリケーション開発", "t": "品質向上：評価・チューニングの現実解", "h": 5.0}, {"s": "応用STEP", "c": "LangChain/LLMによるRAGアプリケーション開発", "t": "次のステップへ", "h": 5.0}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "Docker入門とDockerfileの基本構文", "h": 0.5}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "レイヤーキャッシュと効率的なビルド", "h": 0.5}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "docker‑composeでマルチコンテナを動かそう", "h": 0.5}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "開発環境と本番環境の使い分け／運用戦略", "h": 0.5}, {"s": "応用STEP", "c": "Docker完全ガイド 開発/本番環境運用に備えて", "t": "Djangoアプリケーションのコンテナ化ハンズオン", "h": 2.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "AI と機械学習の全体像", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "AI の変遷", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "統計と機械学習：説明と予測", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "開発環境：Docker + Jupyter / ライブラリ導入", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "最初の予測：線形回帰（数値予測）", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "分類の基礎:ロジスティック回帰 / 決定木", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "特徴量エンジニアリングと前処理パイプライン", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "アンサンブル入門：ランダムフォレスト / ブースティング", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "モデル評価の要点", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "モデルの解釈可能性", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "教師なし学習（K-means / PCA）", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "最小アプリ化：Streamlit で見せる", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "実践：タイタニック生存予測", "h": 1.0}, {"s": "応用STEP", "c": "機械学習入門", "t": "まとめと発展学習の観点", "h": 1.0}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "データ分析の役割", "h": 0.25}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "環境とデータ準備", "h": 0.25}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "pandas 基礎（取り込み・選択・要約）", "h": 0.5}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "pandas 中級（集計・結合・ピボット・変換）", "h": 0.5}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "クリーニング（欠損・外れ値・型・重複）", "h": 0.5}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "可視化：基礎から資料化まで", "h": 0.5}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "EDA 実践：仮説生成と統計的検証", "h": 0.5}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "A/B テストの設計と分析", "h": 0.5}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "実践プロジェクト：ユーザー行動分析", "h": 0.5}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "インタラクティブ・ダッシュボード（Streamlit）", "h": 0.5}, {"s": "応用STEP", "c": "Pythonを用いた高度なデータ分析手法", "t": "まとめ & 継続学習", "h": 0.5}, {"s": "卒業制作", "c": "卒業制作", "t": "README", "h": 10.0}, {"s": "卒業制作", "c": "卒業制作", "t": "画面遷移図", "h": 5.0}, {"s": "卒業制作", "c": "卒業制作", "t": "ER図", "h": 15.0}, {"s": "卒業制作", "c": "卒業制作", "t": "issueベースの開発", "h": 10.0}, {"s": "卒業制作", "c": "卒業制作", "t": "MVPリリース", "h": 140.0}], "capNames": ["README", "画面遷移図", "ER図", "issueベースの開発", "MVPリリース"]}};
+const KEY='sotsu_app_v1';
+const NUDGE_DAYS=75;
+const COURSE_NAME={web:'Web開発スタンダード', python:'Pythonコース'};
+// 卒業制作の逆算プラン。着手目安offは「週の学習時間」から自動計算する。
+const DEFAULT_WEEKLY_H=20;
+const REVIEW_BUFFER=1.25; // 各STEPのレビュー・修正ぶんの余裕（見積り時間の25%増し）
+const APP_GUIDE={step:'アプリ開発完全ガイド', lead:true, extra:30, msg:'アプリ開発の準備を始めましょう🔥', sub:'今日から「完全ガイド」を読み始めよう'};
+const CAP_ITEMS=[
+  {name:'README', h:10, design:true, msg:'READMEから始めましょう🔥', sub:'まず作りたいものを言語化'},
+  {name:'画面遷移図', h:5, design:true, msg:'画面遷移図を描きましょう🔥', sub:'画面のつながりを図にする'},
+  {name:'ER図', h:15, design:true, msg:'ER図に着手しましょう🔥', sub:'データ構造を固める'},
+  {name:'issueベースの開発', h:10, design:true, msg:'issueベースの開発を始めましょう🔥', sub:'機能をissueに分解'},
+  {name:'MVPリリース', h:140, msg:'MVPリリースへ集中🔥', sub:'開発に全力'},
+];
+// 設計STEPが目安日を過ぎても未着手のときのエスカレーション（何日過ぎたか→トーン）
+const DESIGN_ESC=[
+  {past:8, icon:'🤝', title:n=>`${n}で詰まってない？一緒に進めよう`, sub:'設計で止まると後半に響くよ。気軽に質問・相談してね'},
+  {past:4, icon:'👀', title:n=>`${n}、もう着手できてる？`, sub:'完璧じゃなくてOK。まずはざっくり手を動かそう'},
+];
+
+let st=load();
+if(st) st.view = (location.search.indexOf('home')>=0) ? 'home' : 'update'; // 通常は起動時に進捗更新を通す（?home付きは検証用にホーム直開き）
+let openSteps=new Set(); // 折りたたみ状態（STEPインデックス）
+
+function load(){ try{const r=JSON.parse(localStorage.getItem(KEY)); if(r&&r.course)return r;}catch(e){} return null; }
+function save(){ if(st) localStorage.setItem(KEY, JSON.stringify(st)); }
+
+function seq(){ return DATA[st.course].seq; }
+function daysLeft(){ const g=new Date(st.gradDate+'T00:00:00'); const n=new Date(); n.setHours(0,0,0,0); return Math.round((g-n)/86400000); }
+function weeksLeft(){ return Math.max(1, Math.ceil(daysLeft()/7)); }
+function isDone(i){ return st.done.includes(i); }
+function doneCount(){ return st.done.length; }
+function total(){ return seq().length; }
+function remaining(){ return total()-doneCount(); }
+function pct(){ return Math.round(doneCount()/total()*100); }
+const DOW=['日','月','火','水','木','金','土'];
+const DAY=86400000;
+function paceInfo(){ // 今の半端な週は数えず、次の完全な週（月〜日）を基準にペースを出す
+  const n=new Date(); n.setHours(0,0,0,0);
+  const g=new Date(st.gradDate+'T00:00:00');
+  const R=remaining();
+  if(g<=n || R<=0) return {quota:R>0?R:0, label:'卒業日'};
+  // 最初にカウントする週の月曜（今日が月曜ならそのまま、それ以外は次の月曜へ）
+  const dow=n.getDay();
+  const firstMon=new Date(n);
+  if(dow!==1) firstMon.setDate(n.getDate()+((8-dow)%7));
+  // その週の締め＝日曜（卒業日は超えない）
+  let deadline=new Date(firstMon); deadline.setDate(firstMon.getDate()+6);
+  let weeks=Math.max(1, Math.ceil((g-firstMon)/(7*DAY)));
+  if(g<firstMon){ deadline=new Date(g); weeks=1; }        // 今の半端な週の内に卒業
+  else if(deadline>g){ deadline=new Date(g); }             // 締めが卒業日を超える
+  const quota=Math.ceil(R/weeks);
+  return {quota, label:`${deadline.getMonth()+1}/${deadline.getDate()}(${DOW[deadline.getDay()]})`};
+}
+function capStarted(){ return seq().some((t,i)=> t.s==='卒業制作' && isDone(i)); }
+function stepExists(s){ return seq().some(t=>t.s===s); }
+function stepStarted(s){ return seq().some((t,i)=>t.s===s && isDone(i)); }
+function capIndex(name){ return seq().findIndex(t=>t.s==='卒業制作' && t.t===name); }
+function capDone(name){ const i=capIndex(name); return i>=0 && isDone(i); }
+function targetDate(off){ const g=new Date(st.gradDate+'T00:00:00'); const d=new Date(g); d.setDate(g.getDate()-off); return d; }
+function mdd(d){ return `${d.getMonth()+1}/${d.getDate()}`; }
+function weeklyH(){ return (st && st.weeklyHours) || DEFAULT_WEEKLY_H; }
+function capPlan(){ // 各項目のoff（着手目安：卒業日の何日前）を週の学習時間から逆算
+  const wh=weeklyH(); let cum=0; const items=[];
+  for(let k=CAP_ITEMS.length-1;k>=0;k--){ cum+=CAP_ITEMS[k].h; items[k]={...CAP_ITEMS[k], off:Math.ceil(cum/wh*7*REVIEW_BUFFER)}; }
+  const lead={...APP_GUIDE, off: items[0].off + APP_GUIDE.extra};
+  return {lead, items};
+}
+function coach(){ // 今やるべき卒業制作の1件（時期到来かつ未着手）を返す
+  const dl=daysLeft(); if(dl<0) return null;
+  const {lead, items}=capPlan();
+  for(const r of [lead, ...items]){
+    if(r.lead && !stepExists(r.step)) continue;
+    if(dl<=r.off){
+      const unmet = r.lead ? !stepStarted(r.step) : !capDone(r.name);
+      if(!unmet) continue;
+      if(r.design){ const past=r.off-dl; // 目安日を過ぎた日数でトーンを段階的に強める
+        const e=DESIGN_ESC.find(x=>past>=x.past);
+        if(e) return {icon:e.icon, title:e.title(r.name), sub:e.sub}; }
+      return {icon:'🔥', title:r.msg, sub:r.sub};
+    }
+  }
+  return null;
+}
+function capRoadmapHTML(){
+  const dl=daysLeft(); const {items}=capPlan();
+  const rows=items.map(r=>{
+    const i=capIndex(r.name), done=i>=0&&isDone(i), due=!done && dl<=r.off;
+    return `<div class="ritem ${done?'done':''} ${due?'due':''}" data-captoggle="${i}">
+      <span class="rbox">${done?'☑':(due?'🔥':'☐')}</span>
+      <span class="rnm">${r.name}<span class="rh">${r.h}h</span></span>
+      <span class="rdate">${done?'完了':mdd(targetDate(r.off))+'目安'}</span></div>`;
+  }).join('');
+  return `<div class="road"><div class="rt"><span>卒業制作ロードマップ</span><span>週${weeklyH()}h換算の着手目安</span></div>${rows}
+    <div class="rcap">各STEPにはレビュー・修正が入ります。目安日はその分を見込んで少し早めにしているので、焦らずに…。卒業日に間に合えばオールOK🙆</div></div>`;
+}
+
+const app=document.getElementById('app');
+function render(){ if(!st){renderSetup();return;} if(st.view==='home'){renderHome();return;} renderUpdate(); }
+
+function renderSetup(){
+  app.innerHTML=`<div class="card setup">
+    <h1>タスク（課題）確認を始めよう！</h1>
+    <p class="sub">コースと卒業日を選ぶだけ。あとは毎日ボタンを押すだけです。</p>
+    <div class="label">コースは？</div>
+    <div class="course-row">
+      <button class="course-btn" data-c="web">Web開発</button>
+      <button class="course-btn" data-c="python">Python</button>
+    </div>
+    <div class="label">卒業日はいつ？<span style="color:var(--tx3);font-weight:400;font-size:12px;">※MVPリリース予定日を設定しましょう</span></div>
+    <input type="date" id="gd">
+    <div class="label">1週間にどれくらい勉強する？（あとで変更できます）</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <input type="number" id="wh" value="20" min="1" max="100" step="1" style="width:120px">
+      <span style="color:var(--tx2);font-size:14px;">時間 / 週</span></div>
+    <button class="primary" id="start" style="margin-top:26px" disabled>はじめる</button>
+  </div>`;
+  let course=null; const gd=document.getElementById('gd'), sb=document.getElementById('start');
+  const chk=()=>{sb.disabled=!(course&&gd.value);};
+  app.querySelectorAll('.course-btn').forEach(b=>b.onclick=()=>{course=b.dataset.c;
+    app.querySelectorAll('.course-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on'); chk();});
+  gd.onchange=chk;
+  sb.onclick=()=>{ const wh=Math.max(1, parseInt(document.getElementById('wh').value)||DEFAULT_WEEKLY_H);
+    st={course, gradDate:gd.value, weeklyHours:wh, done:[], view:'update'}; save(); render(); };
+}
+
+function donutSVG(){
+  const r=76, C=2*Math.PI*r, p=pct(), done=C*p/100;
+  return `<svg viewBox="0 0 180 180" width="180" height="180">
+    <circle cx="90" cy="90" r="${r}" fill="none" stroke="var(--bg)" stroke-width="16"/>
+    <circle cx="90" cy="90" r="${r}" fill="none" stroke="var(--ok-solid)" stroke-width="16"
+      stroke-linecap="round" stroke-dasharray="${done.toFixed(1)} ${(C-done).toFixed(1)}"
+      transform="rotate(-90 90 90)"/></svg>`;
+}
+
+function renderHome(){
+  const dl=daysLeft(), over=dl<0, rem=remaining(), done=doneCount();
+  const pi=paceInfo();
+  const co=coach();
+  app.innerHTML=`<div class="card">
+    <div class="head">
+      <div><div class="cn">${COURSE_NAME[st.course]}</div><div class="gd">卒業日 ${fmt(st.gradDate)}</div></div>
+      <button class="iconbtn" id="reset">⚙</button>
+    </div>
+    <div class="count">
+      <div class="cap">${over?'卒業予定日から':'卒業日まで'}</div>
+      <div class="big ${over?'over':''}">${Math.abs(dl)}<small>日${over?'経過':''}</small></div>
+    </div>
+    <div class="donutwrap">
+      <div class="donut">${donutSVG()}<div class="ctr"><div class="pct">${pct()}%</div><div class="pl">完了</div></div></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--ok-solid)"></i>終わった ${done}</span>
+        <span><i class="dot" style="background:var(--bg);border:1px solid var(--line2)"></i>残り ${rem}</span>
+      </div>
+    </div>
+    <div class="week"><div class="wl">${pi.label} までに終わらせたいタスク（課題）</div><div class="wv">${pi.quota}<small>個</small></div></div>
+    ${co?`<div class="banner"><div class="bi">${co.icon||'🔥'}</div><div>
+      <div class="bt">${co.title}</div><div class="bs">${co.sub}</div></div></div>`:''}
+    ${capRoadmapHTML()}
+    <div class="bigbtn"><button class="primary" id="toupd">📍 今ここまで進んだ</button></div>
+    <div class="hint">進捗を更新したいときはこのボタンから。</div>
+  </div>`;
+  document.getElementById('toupd').onclick=()=>{st.view='update';save();render();};
+  document.getElementById('reset').onclick=()=>{ const cur=weeklyH();
+    const v=prompt('1週間の学習時間（時間）を入力してください。\nこれをもとに卒業制作の着手目安日が計算されます。', cur);
+    if(v!==null){ st.weeklyHours=Math.max(1, parseInt(v)||cur); save(); render(); } };
+  app.querySelectorAll('[data-captoggle]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.captoggle; if(i<0)return; const x=st.done.indexOf(i);
+    if(x>=0)st.done.splice(x,1); else st.done.push(i); save(); render(); });
+}
+
+function renderUpdate(){
+  const s=seq();
+  const steps=[]; s.forEach(t=>{ if(!steps.includes(t.s)) steps.push(t.s); });
+  // 何も開いていなければ、次にやる課題があるSTEPを自動で開く
+  if(openSteps.size===0){
+    let fi=s.findIndex((t,i)=>!isDone(i)); if(fi<0) fi=s.length-1;
+    openSteps.add(steps.indexOf(s[fi].s));
+  }
+  // STEPごとの完了数
+  const cnt={}; s.forEach((t,i)=>{ const k=t.s; (cnt[k]=cnt[k]||{d:0,n:0}).n++; if(isDone(i))cnt[k].d++; });
+
+  let html=`<div class="ubar">
+    <div class="barrow"><button class="homebtn" id="home">‹ ホーム</button>
+    <div class="chips">${steps.map((st_,ix)=>`<button class="chip${st_==='卒業制作'?' cap':''}" data-jump="${ix}">${st_}</button>`).join('')}</div></div>
+  </div>
+  <div class="uhead"><div class="ut">今ここまで進んだ？</div>
+    <div class="us">やり終えた課題で「ここまで」を押すとそこまで一括完了。飛ばした課題は □ で外せます。STEP名をタップで開閉。</div></div>`;
+
+  let cs=null, cc=null;
+  s.forEach((t,i)=>{
+    if(t.s!==cs){
+      if(cs!==null) html+='</div></div>'; // close .gb と .grp
+      cs=t.s; cc=null;
+      const ix=steps.indexOf(t.s), open=openSteps.has(ix);
+      html+=`<div class="card grp ${t.s==='卒業制作'?'cap':''}" id="grp-${ix}">
+        <button class="gh" data-step="${ix}"><span>${t.s}</span>
+          <span class="gc">${cnt[t.s].d}/${cnt[t.s].n}<i class="cv">${open?'▲':'▼'}</i></span></button>
+        <div class="gb" ${open?'':'style="display:none"'}>`;
+    }
+    if(t.c!==cc && t.s!=='卒業制作'){ cc=t.c; html+=`<div class="sub">${t.c}</div>`; }
+    const d=isDone(i);
+    html+=`<div class="trow ${d?'done':''}">
+      <button class="cb" data-toggle="${i}">${d?'☑':'☐'}</button>
+      <span class="tn">${t.t}</span><span class="th">${t.h}h</span>
+      <button class="here" data-here="${i}">ここまで</button></div>`;
+  });
+  html+=`</div></div><div class="foot"><button id="reset2">設定をリセット</button></div>`;
+  app.innerHTML=html;
+
+  document.getElementById('home').onclick=()=>{ st.view='home'; save(); render(); };
+  document.getElementById('reset2').onclick=()=>{ if(confirm('設定をリセットして最初からやり直しますか？（進捗も消えます）')){localStorage.removeItem(KEY);st=null;openSteps.clear();render();} };
+  app.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ const ix=+b.dataset.step;
+    if(openSteps.has(ix)) openSteps.delete(ix); else openSteps.add(ix); render(); });
+  app.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{ const ix=+b.dataset.jump;
+    openSteps.add(ix); render();
+    const el=document.getElementById('grp-'+ix); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); });
+  app.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.toggle; const x=st.done.indexOf(i);
+    if(x>=0)st.done.splice(x,1); else st.done.push(i); save(); render(); });
+  app.querySelectorAll('[data-here]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.here;
+    for(let k=0;k<=i;k++) if(!st.done.includes(k)) st.done.push(k); save(); render(); });
+}
+
+function fmt(d){ const p=d.split('-'); return p[0]+'/'+p[1]+'/'+p[2]; }
+render();
+</script>
+</body>
+</html>
